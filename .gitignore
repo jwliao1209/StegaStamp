@@ -1,0 +1,3 @@
+dataset/
+lightning_logs/
+src/__pycache__/

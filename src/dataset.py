@@ -4,7 +4,7 @@ from torch.utils.data import Dataset, DataLoader
 from pytorch_lightning import LightningDataModule
 
 
-class FingerprintsDataset(Dataet):
+class FingerprintsDataset(Dataset):
     def __init__(self):
         super(FingerprintsDataset, self).__init__()
 

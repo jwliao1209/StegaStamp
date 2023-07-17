@@ -103,7 +103,7 @@ class StegaStampDecoder(nn.Module):
             nn.Conv2d(128, 128, 3, 2, 1),
             nn.ReLU(),
         )
-        self.fc_input_size = resolution * resolution * 128 // 32 // 32, 512
+        self.fc_input_size = resolution * resolution * 128 // 32 // 32
         self.dense = nn.Sequential(
             nn.Linear(self.fc_input_size, 512),
             nn.ReLU(),
@@ -118,6 +118,7 @@ class StegaStampDecoder(nn.Module):
 
 class StegaStampLoss(nn.Module):
     def __init__(self, mse_weight, bce_weight):
+        super(StegaStampLoss, self).__init__()
         self.mse_weight = mse_weight
         self.bce_weight = bce_weight
         self.mse = nn.MSELoss()
@@ -158,7 +159,7 @@ class LitModel(LightningModule):
     def forward(self, x):
         return self.model(x)
 
-    def configure_optimizer(self):
+    def configure_optimizers(self):
         return [self.optimizer], [self.scheduler]
     
     # def share_step(self, batch):

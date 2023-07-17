@@ -37,11 +37,11 @@ def parse_arguments():
     parser.add_argument(
         '--accelerator',
         type=str,
-        default="",
+        default="cuda",
         help='Accelerator.',
     )
     parser.add_argument(
-        '--device',
+        '--devices',
         type=int,
         default=[0],
         nargs='+',
@@ -57,18 +57,20 @@ def parse_arguments():
 
 
 def train(args):
-    optimizer = torch.optim.Adam(lr=args.lr, weight_decay=args.weight_decay)
+    model = StegaStampModel()
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer=optimizer, step_size=5, gamma=0.8
     )
-    model = StegaStampModel()
     lit_model = LitModel(
         model=model,
         optimizer=optimizer,
         scheduler=scheduler,
     )
-    lit_dataloader = LitDataLoader()
-
+    lit_dataloader = LitDataLoader(
+        batch_size=args.batch_size,
+        num_workers=args.num_workers
+    )
     trainer = Trainer(
         max_epochs=args.max_epochs,
         accelerator=args.accelerator,
