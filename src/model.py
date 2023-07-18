@@ -55,9 +55,9 @@ class StegaStampEncoder(nn.Module):
         self.conv10 = nn.Conv2d(32, 32, 3, 1, 1)
         self.residual = nn.Conv2d(32, image_channel, 1)
 
-    def forward(self, fingerprint, image):
+    def forward(self, image, fingerprint, **kwargs):
         fingerprint = relu(self.secret_dense(fingerprint))
-        fingerprint = fingerprint.view((-1, self.IMAGE_CHANNELS, 16, 16))
+        fingerprint = fingerprint.view((-1, self.image_channel, 16, 16))
         fingerprint_enlarged = self.fingerprint_upsample(fingerprint)
         inputs = torch.cat([fingerprint_enlarged, image], dim=1)
         conv1 = relu(self.conv1(inputs))
@@ -110,7 +110,7 @@ class StegaStampDecoder(nn.Module):
             nn.Linear(512, fingerprint_size),
         )
 
-    def forward(self, x):
+    def forward(self, x, **kwargs):
         x = self.decoder(x)
         out = self.dense(x.view(-1, self.fc_input_size))
         return out
@@ -131,7 +131,7 @@ class StegaStampLoss(nn.Module):
     #     )
 
     def forward(self, inputs, outputs):
-        mse_loss = self.mse(inputs["images"], outputs["encoder"])
+        mse_loss = self.mse(inputs["image"], outputs["encoder"])
         bce_loss = self.bce(inputs["fingerprint"], outputs["decoder"])
         return self.mse_weight * mse_loss + self.bce_weight * bce_loss
 
@@ -139,13 +139,21 @@ class StegaStampLoss(nn.Module):
 class StegaStampModel(nn.Module):
     def __init__(self):
         super(StegaStampModel, self).__init__()
-        self.encoder = StegaStampEncoder()
-        self.decoder = StegaStampDecoder()
-    
-    def forward(self, x):
-        encoder_out = self.encoder(x)
-        decoder_out = self.decoder(encoder_out)
-        return dict(encoder=encoder_out, decoder=decoder_out)
+        self.encoder = StegaStampEncoder(
+            resolution=128,
+            image_channel=3,
+            fingerprint_size=128
+        )
+        self.decoder = StegaStampDecoder(
+            resolution=128,
+            image_channel=3,
+            fingerprint_size=128
+        )
+
+    def forward(self, **inputs):
+        encoder_outputs = self.encoder(**inputs)
+        decoder_outputs = self.decoder(encoder_outputs)
+        return dict(encoder=encoder_outputs, decoder=decoder_outputs)
 
 
 class LitModel(LightningModule):
@@ -156,8 +164,8 @@ class LitModel(LightningModule):
         self.optimizer = optimizer
         self.scheduler = scheduler
 
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, **inputs):
+        return self.model(**inputs)
 
     def configure_optimizers(self):
         return [self.optimizer], [self.scheduler]
@@ -169,16 +177,16 @@ class LitModel(LightningModule):
     #     return outputs
     
     def training_step(self, batch, batch_idx):
-        outputs = self.forward(batch["images"])
-        loss = self.compute_loss(batch, outputs)
+        outputs = self.forward(**batch)
+        loss = self.criterion(batch, outputs)
         return dict(loss=loss, inputs=batch, outputs=outputs)
     
     def validation_step(self, batch, batch_idx):
-        outputs = self.forward(batch["images"])
-        loss = self.compute_loss(batch, outputs)
+        outputs = self.forward(**batch)
+        loss = self.criterion(batch, outputs)
         return dict(loss=loss, inputs=batch, outputs=outputs)
     
     def test_step(self, batch, batch_idx):
-        outputs = self.forward(batch["images"])
-        loss = self.compute_loss(batch, outputs)
+        outputs = self.forward(batch)
+        loss = self.criterion(batch, outputs)
         return dict(loss=loss, inputs=batch, outputs=outputs)
