@@ -27,7 +27,7 @@ class ReadImaged(BaseTransform):
         super(ReadImaged, self).__init__(keys, **kwargs)
 
     def _process(self, single_data, **kwargs):
-        single_data = read_image(single_data)  # (218, 187, 3)
+        single_data = read_image(single_data)
         return single_data
 
 
@@ -42,6 +42,14 @@ class ResizeImaged(BaseTransform):
         return self.resize(single_data)
 
 
+class ConvertToFloat(BaseTransform):
+    def __init__(self, keys, **kwargs):
+        super(ConvertToFloat, self).__init__(keys, **kwargs)
+    
+    def _process(self, single_data, **kwargs):
+        return single_data.float()
+
+
 class MinMaxNormalizeImaged(BaseTransform):
     def __init__(self, keys, **kwargs):
         super(MinMaxNormalizeImaged, self).__init__(keys, **kwargs)
@@ -49,7 +57,7 @@ class MinMaxNormalizeImaged(BaseTransform):
     def _process(self, single_data, **kwargs):
         maximum = torch.max(single_data)
         mininum = torch.min(single_data)
-        return (single_data.float() - mininum) / (maximum - mininum)
+        return (single_data - mininum) / (maximum - mininum)
 
 
 class StandardNormalizeImaged(BaseTransform):
@@ -62,7 +70,7 @@ class StandardNormalizeImaged(BaseTransform):
         self.normal = Normalize(mean, std)
 
     def _process(self, single_data, **kwargs):
-        return self.normal(single_data.float())
+        return self.normal(single_data)
 
 
 def get_transform():
@@ -71,7 +79,8 @@ def get_transform():
             ReadImaged(keys=["image"]),
             ResizeImaged(keys=["image"], size=(128, 128)),
             ToTensord(keys=["image", "fingerprint"]),
-            MinMaxNormalizeImaged(keys=["image", "fingerprint"]),
-            StandardNormalizeImaged(keys=["image"]),
+            ConvertToFloat(keys=["image", "fingerprint"]),
+            MinMaxNormalizeImaged(keys=["image"]),
+            # StandardNormalizeImaged(keys=["image"]),
         ]
     )

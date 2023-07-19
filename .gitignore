@@ -1,3 +1,5 @@
 dataset/
 lightning_logs/
+StegaStamp/
+wandb/
 src/__pycache__/

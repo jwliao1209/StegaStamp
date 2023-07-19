@@ -1,10 +1,7 @@
 import os
 import copy
-
-import torchvision
-from torchvision import transforms
+import pytorch_lightning as pl
 from torch.utils.data import Dataset, DataLoader
-from pytorch_lightning import LightningDataModule
 
 from src.transforms import get_transform
 from src.utils import load_json
@@ -24,7 +21,7 @@ class FingerprintsDataset(Dataset):
         return self.transform(data) if self.transform is not None else data
 
 
-class LitDataLoader(LightningDataModule):
+class LitDataLoader(pl.LightningDataModule):
     def __init__(self, batch_size, num_workers):
         super(LitDataLoader, self).__init__()
         self.batch_size = batch_size

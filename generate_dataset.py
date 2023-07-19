@@ -6,7 +6,7 @@ import numpy as np
 
 
 def generate_fingerprint(fingerprint_size=128):
-    return np.random.randint(0, high=255, size=fingerprint_size, dtype=int).tolist()
+    return np.random.randint(0, high=2, size=fingerprint_size, dtype=int).tolist()
 
 
 def generate_data_dict(file_path):
