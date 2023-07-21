@@ -1,3 +1,4 @@
+import torch
 import pytorch_lightning as pl
 
 
@@ -19,49 +20,31 @@ class LitModel(pl.LightningModule):
     def compute_accuracy(self, predition, ground_truth):
         return ((predition > 0).long() == ground_truth).float().mean()
 
-    # def share_step(self, batch):
-    #     images, labels = batch
-    #     outputs = self.forward(images)
-    #     loss = self.criterion(images, labels)
-    #     return outputs
-    
+    def share_step(self, batch, prefix):
+        outputs = self.forward(**batch)
+        loss = self.criterion(batch, outputs)
+        acc = self.compute_accuracy(outputs["decoder"], batch["fingerprint"])
+
+        self.log(f"{prefix}_loss/mse", loss["mse"], prog_bar=False)
+        self.log(f"{prefix}_loss/bce", loss["bce"], prog_bar=False)
+        self.log(f"{prefix}_loss/total", loss["total"], prog_bar=True)
+        self.log(f"{prefix}_acc", acc, prog_bar=True)
+
+        return dict(inputs=batch, outputs=outputs, loss=loss, acc=acc)
+
     def training_step(self, batch, batch_idx):
-        outputs = self.forward(**batch)
-        loss = self.criterion(batch, outputs)
-        acc = self.compute_accuracy(outputs["decoder"], batch["fingerprint"])
+        output_dict = self.share_step(batch, "train")
+        self.log(
+            f"mse_weight",
+            torch.tensor(self.criterion.active_mse_weight), prog_bar=False
+        )
+        self.criterion.update_mse_weight(output_dict["acc"])
+        return output_dict["loss"]["total"]
 
-        self.log("train_loss/mse", loss["mse"], prog_bar=False)
-        self.log("train_loss/bce", loss["bce"], prog_bar=True)
-        self.log("train_loss/total", loss["total"], prog_bar=False)
-        self.log("train_acc", acc, prog_bar=True)
-
-        if self.criterion.steps_since_l2_loss_activated == -1:
-            if acc > 0.9:
-                self.criterion.steps_since_l2_loss_activated = 0
-        else:
-            self.criterion.steps_since_l2_loss_activated += 1
-
-        return loss["total"]
-    
     def validation_step(self, batch, batch_idx):
-        outputs = self.forward(**batch)
-        loss = self.criterion(batch, outputs)
-        acc = self.compute_accuracy(outputs["decoder"], batch["fingerprint"])
-
-        self.log("valid_loss/mse", loss["mse"], prog_bar=False)
-        self.log("valid_loss/bce", loss["bce"], prog_bar=False)
-        self.log("valid_loss/total", loss["total"], prog_bar=True)
-        self.log("valid_acc", acc, prog_bar=True)
-        return
+        output_dict = self.share_step(batch, "valid")
+        return dict(outputs=output_dict["outputs"])
     
     def test_step(self, batch, batch_idx):
-        outputs = self.forward(batch)
-        loss = self.criterion(batch, outputs)
-        acc = self.compute_accuracy(outputs["decoder"], batch["fingerprint"])
-
-        self.log("test_loss/mse", loss["mse"], prog_bar=False)
-        self.log("test_loss/bce", loss["bce"], prog_bar=False)
-        self.log("test_loss/total", loss["total"], prog_bar=True)
-        self.log("test_acc", acc, prog_bar=True)
-
-        return dict(loss=loss["total"], acc=acc)
+        output_dict = self.share_step(batch, "test")
+        return dict(outputs=output_dict["outputs"])

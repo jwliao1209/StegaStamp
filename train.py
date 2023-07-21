@@ -2,7 +2,6 @@ import argparse
 import wandb
 
 import torch
-import torch.nn as nn
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
@@ -81,6 +80,7 @@ def train(args):
     # )
     lit_model = LitModel(
         model=model,
+        criterion=criterion,
         optimizer=optimizer,
         # scheduler=scheduler,
     )
@@ -90,7 +90,7 @@ def train(args):
     )
 
     # checkpoint_callback = ModelCheckpoint(monitor='valid_loss', mode='min')
-    # log_predictions_callback = LogPredictionsCallback(wandb_logger=wandb_logger)
+    log_predictions_callback = LogPredictionsCallback(wandb_logger=wandb_logger)
 
     trainer = Trainer(
         max_epochs=args.max_epochs,
@@ -98,10 +98,10 @@ def train(args):
         accelerator=args.accelerator,
         devices=args.devices,
         # precision="16-mixed",
-        # callbacks=[
+        callbacks=[
             # checkpoint_callback,
-            # log_predictions_callback,
-        # ],
+            log_predictions_callback,
+        ],
         logger=wandb_logger,
     )
     trainer.fit(lit_model, datamodule=lit_dataloader)

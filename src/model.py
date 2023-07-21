@@ -15,8 +15,8 @@ class StegaStampEncoder(nn.Module):
     def __init__(
         self,
         resolution=32,
-        image_channel=1,
-        fingerprint_size=100,
+        image_channel=3,
+        fingerprint_size=128,
         return_residual=False,
     ):
         super(StegaStampEncoder, self).__init__()
@@ -58,12 +58,7 @@ class StegaStampEncoder(nn.Module):
         fingerprint = fingerprint.view((-1, self.image_channel, 16, 16))
         fingerprint_enlarged = self.fingerprint_upsample(fingerprint)
 
-        temp_image = torch.zeros_like(image)
-
-
-
-
-        inputs = torch.cat([fingerprint_enlarged, temp_image], dim=1)
+        inputs = torch.cat([fingerprint_enlarged, image], dim=1)
         conv1 = relu(self.conv1(inputs))
         conv2 = relu(self.conv2(conv1))
         conv3 = relu(self.conv3(conv2))
@@ -89,7 +84,12 @@ class StegaStampEncoder(nn.Module):
 
 
 class StegaStampDecoder(nn.Module):
-    def __init__(self, resolution=32, image_channel=1, fingerprint_size=128):
+    def __init__(
+            self,
+            resolution=32,
+            image_channel=3,
+            fingerprint_size=128
+        ):
         super(StegaStampDecoder, self).__init__()
         self.fingerprint_size = fingerprint_size
         self.decoder = nn.Sequential(
@@ -122,35 +122,25 @@ class StegaStampDecoder(nn.Module):
 
 
 class StegaStampModel(nn.Module):
-    def __init__(self):
+    def __init__(
+            self,
+            resolution=128,
+            image_channel=3,
+            fingerprint_size=128,
+        ):
         super(StegaStampModel, self).__init__()
-        # self.encoder = StegaStampEncoder(
-        #     resolution=128,
-        #     image_channel=3,
-        #     fingerprint_size=128
-        # )
-        # self.decoder = StegaStampDecoder(
-        #     resolution=128,
-        #     image_channel=3,
-        #     fingerprint_size=128
-        # )
-
-        self.linear1 = nn.Linear(128, 64)
-        self.linear2 = nn.Linear(64, 128)
-        self.linear3 = nn.Linear(128, 256)
-        self.linear4 = nn.Linear(256, 512)
-        self.linear5 = nn.Linear(512, 256)
-        self.linear6 = nn.Linear(256, 128)
-        self.act = nn.ReLU()
+        self.encoder = StegaStampEncoder(
+            resolution=resolution,
+            image_channel=image_channel,
+            fingerprint_size=fingerprint_size,
+        )
+        self.decoder = StegaStampDecoder(
+            resolution=resolution,
+            image_channel=image_channel,
+            fingerprint_size=fingerprint_size,
+        )
 
     def forward(self, **inputs):
-        # encoder_outputs = self.encoder(**inputs)
-        # decoder_outputs = self.decoder(encoder_outputs)
-        # return dict(encoder=encoder_outputs, decoder=decoder_outputs)
-        x = self.act(self.linear1(inputs["fingerprint"]))
-        x = self.act(self.linear2(x))
-        x = self.act(self.linear3(x))
-        x = self.act(self.linear4(x))
-        x = self.act(self.linear5(x))
-        x = self.linear6(x)
-        return dict(encoder=inputs["image"], decoder=x)
+        encoder_outputs = self.encoder(**inputs)
+        decoder_outputs = self.decoder(encoder_outputs)
+        return dict(encoder=encoder_outputs, decoder=decoder_outputs)

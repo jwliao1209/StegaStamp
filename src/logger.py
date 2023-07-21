@@ -12,15 +12,16 @@ class LogPredictionsCallback(Callback):
             outputs,
             batch,
             batch_idx,
-            dataloader_idx=0,
     ):
         if batch_idx == 0:
-            images = [img for img in batch["image"]]
-            captions = [f for f in batch["fingerprint"]]
+            images = batch["image"][0].cpu().permute(1,2,0)
+            outputs = outputs["outputs"]["encoder"][0].cpu().permute(1,2,0)
+        
+            # captions = [",".join(map(lambda x: str(x), f.tolist())) for f in batch["fingerprint"][0].cpu()]
             self.wandb_logger.log_image(
                 key='sample_images',
-                images=images,
-                caption=captions
+                images=[images, outputs],
+                # caption=captions,
             )
 
         return
