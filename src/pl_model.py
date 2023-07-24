@@ -25,10 +25,10 @@ class LitModel(pl.LightningModule):
         loss = self.criterion(batch, outputs)
         acc = self.compute_accuracy(outputs["decoder"], batch["fingerprint"])
 
-        self.log(f"{prefix}_loss/mse", loss["mse"], prog_bar=False)
-        self.log(f"{prefix}_loss/bce", loss["bce"], prog_bar=False)
-        self.log(f"{prefix}_loss/total", loss["total"], prog_bar=True)
-        self.log(f"{prefix}_acc", acc, prog_bar=True)
+        self.log(f"{prefix}/mse_loss", loss["mse"], prog_bar=False)
+        self.log(f"{prefix}/bce_loss", loss["bce"], prog_bar=False)
+        self.log(f"{prefix}/total_loss", loss["total"], prog_bar=True)
+        self.log(f"{prefix}/acc", acc, prog_bar=True)
 
         return dict(inputs=batch, outputs=outputs, loss=loss, acc=acc)
 

@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 
@@ -9,16 +8,19 @@ class StegaStampLoss(nn.Module):
         self.bce_weight = bce_weight
         self.mse = nn.MSELoss()
         self.bce = nn.BCEWithLogitsLoss()
+
         self.active_mse_weight = 0
-        self.steps_since_l2_loss_activated = -1
+        self.steps_since_mse_loss_activated = -1
+        self.mse_loss_await = 1000
+        self.mse_loss_ramp = 3000
 
     def update_mse_weight(self, acc):
         if acc > 0.9:
-            self.steps_since_l2_loss_activated += 1
+            self.steps_since_mse_loss_activated += 1
 
-        l2_loss_await = 1000
-        l2_loss_ramp = 3000
-        self.active_mse_weight = min(max(0, self.mse_weight * (self.steps_since_l2_loss_activated - l2_loss_await) / l2_loss_ramp), self.mse_weight)
+        self.active_mse_weight = min(
+            max(0, self.mse_weight * (self.steps_since_mse_loss_activated - self.mse_loss_await) / self.mse_loss_ramp), self.mse_weight
+        )
         return
 
     def forward(self, inputs, outputs):
